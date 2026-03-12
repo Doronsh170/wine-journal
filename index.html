@@ -109,9 +109,18 @@
     font-size: 19px;
     font-weight: 800;
     cursor: pointer;
-    margin-bottom: 28px;
+    margin-bottom: 12px;
     box-shadow: 0 15px 35px rgba(158,48,80,0.35);
     font-family: inherit;
+  }
+  .gallery-btn {
+    background: var(--card);
+    color: var(--gold);
+    box-shadow: none;
+    border: 1px solid var(--border);
+    font-size: 16px;
+    padding: 18px;
+    margin-bottom: 28px;
   }
 
   .search-bar {
@@ -369,8 +378,10 @@
     </div>
 
     <div id="photoMode">
-      <button class="scan-btn" onclick="document.getElementById('fileInput').click()">🍷 סרוק יין חדש</button>
-      <input id="fileInput" type="file" accept="image/*" style="display:none" onchange="handlePhoto(event)" />
+      <button class="scan-btn" onclick="document.getElementById('cameraInput').click()">📸 צלם תווית</button>
+      <button class="scan-btn gallery-btn" onclick="document.getElementById('galleryInput').click()">🖼️ בחר מהגלריה</button>
+      <input id="cameraInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(event)" />
+      <input id="galleryInput" type="file" accept="image/*" style="display:none" onchange="handlePhoto(event)" />
     </div>
 
     <div id="textMode" class="hidden">
