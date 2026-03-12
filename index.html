@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#9e3050">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="יומן היין">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍷</text></svg>">
+<title>🍷 יומן היין שלי</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #15101a;
+    --surface: #1e1824;
+    --card: #28202f;
+    --accent: #9e3050;
+    --accent-light: #c44068;
+    --gold: #cda050;
+    --gold-light: #e0bb6e;
+    --text: #ede4ea;
+    --muted: #9a8e96;
+    --border: #3d3245;
+    --radius: 16px;
+    --shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    max-width: 500px;
+    margin: 0 auto;
+    padding-bottom: env(safe-area-inset-bottom);
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  .header { padding: 40px 22px 20px; text-align: right; position: relative; }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--text), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .header .sub { color: var(--muted); font-size: 14px; margin-top: 6px; font-weight: 400; opacity: 0.8; }
+
+  .settings-btn {
+    position: absolute;
+    top: 40px;
+    left: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--gold);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+  }
+
+  .main { padding: 0 18px 120px; }
+
+  .mode-toggle {
+    display: flex;
+    background: var(--surface);
+    padding: 4px;
+    border-radius: 14px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+  .mode-btn.active { background: var(--card); color: var(--gold); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+
+  .scan-btn {
+    width: 100%;
+    padding: 22px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    border: none;
+    border-radius: var(--radius);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 30px rgba(158,48,80,0.3);
+    transition: transform 0.1s;
+  }
+  .scan-btn:active { transform: scale(0.98); }
+
+  .search-bar {
+    display: flex;
+    gap: 10px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 16px;
+    padding: 12px;
+    direction: rtl;
+  }
+  .search-go {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--gold);
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 16px 8px;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+  .stat-val { font-size: 22px; font-weight: 800; color: var(--gold); margin-bottom: 4px; }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .wine-list { display: flex; flex-direction: column; gap: 14px; }
+  .wine-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .wine-card.open { border-color: var(--gold); }
+  .wine-card.open .wine-details { display: block; }
+
+  .wine-name { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .wine-winery { color: var(--muted); font-size: 13px; }
+  .wine-details { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); display: none; }
+  
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .info-pill {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid rgba(61,50,69,0.5);
+  }
+  .info-pill .lbl { font-size: 10px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .info-pill .val { font-size: 14px; color: var(--text); font-weight: 500; }
+
+  .type-badge {
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-block;
+    margin-bottom: 10px;
+  }
+  .type-אדום { background: rgba(158,48,80,0.2); color: #c44068; }
+  .type-לבן { background: rgba(205,160,80,0.2); color: #cda050; }
+
+  .stars { display: flex; gap: 4px; direction: ltr; margin: 12px 0; }
+  .stars button { background: none; border: none; cursor: pointer; font-size: 32px; color: var(--border); transition: all 0.2s; }
+  .stars button.active { color: var(--gold); }
+
+  .loading { text-align: center; padding: 60px 20px; }
+  .spinner {
+    width: 60px; height: 60px;
+    border: 5px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 24px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .result-card, .user-card, .setup-card {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 24px;
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  
+  .input-field {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; color: var(--text); padding: 16px; margin-top: 12px;
+    font-family: inherit; font-size: 15px; outline: none;
+  }
+  
+  .save-btn {
+    width: 100%; padding: 20px; background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    color: var(--bg); border: none; border-radius: var(--radius); font-weight: 800; cursor: pointer; font-size: 17px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--gold);
+    color: var(--bg);
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-weight: 700;
+    z-index: 1000;
+    animation: fadeInOut 2s forwards;
+  }
+  @keyframes fadeInOut { 
+    0% { opacity: 0; transform: translate(-50%, 20px); }
+    15% { opacity: 1; transform: translate(-50%, 0); }
+    85% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -20px); }
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="settings-btn" onclick="showView('setupView')">⚙️</button>
+  <h1>🍷 יומן היין שלי</h1>
+  <p class="sub">צלם תווית וקבל ניתוח סומלייה מיידי</p>
+</div>
+
+<div class="main">
+  <!-- Home View -->
+  <div id="homeView">
+    <div id="keyMissingAlert" class="hidden" style="padding:15px; background:rgba(205,160,80,0.1); border:1px solid var(--gold); border-radius:12px; margin-bottom:20px; font-size:13px; text-align:center">
+      ⚠️ חסר מפתח API. כדי לנתח יינות ב-GitHub, עליך להגדיר מפתח אישי בהגדרות.
+    </div>
+
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btnPhoto" onclick="setMode('photo')">📸 צילום</button>
+      <button class="mode-btn" id="btnText" onclick="setMode('text')">⌨️ חיפוש</button>
+    </div>
+
+    <div id="photoMode">
+      <button class="scan-btn" onclick="document.getElementById('fileInput').click()">🍷 סרוק תווית חדשה</button>
+      <input id="fileInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(event)" />
+    </div>
+
+    <div id="textMode" class="hidden">
+      <div class="search-bar">
+        <input id="searchInput" class="search-input" placeholder='שם היין והבציר...' onkeydown="if(event.key==='Enter')handleText()" />
+        <button class="search-go" onclick="handleText()">✨</button>
+      </div>
+    </div>
+
+    <div id="statsBar" class="stats"></div>
+    <div id="wineList" class="wine-list"></div>
+  </div>
+
+  <!-- Loading View -->
+  <div id="loadingView" class="hidden">
+    <div class="loading">
+      <div class="spinner"></div>
+      <p style="font-weight:600">הסומלייה מנתח את הבקבוק...</p>
+    </div>
+  </div>
+
+  <!-- Result View -->
+  <div id="resultView" class="hidden"></div>
+
+  <!-- Setup/Settings View -->
+  <div id="setupView" class="hidden">
+    <div class="setup-card">
+      <h3 style="margin-bottom:10px">הגדרות API</h3>
+      <p style="font-size:13px; color:var(--muted); line-height:1.5">כדי שהאפליקציה תעבוד ב-GitHub, עליך להזין מפתח API של Gemini (בחינם ב-Google AI Studio). המפתח נשמר במכשיר שלך בלבד.</p>
+      <input type="password" id="userApiKey" class="input-field" placeholder="הכנס מפתח API כאן...">
+      <button class="save-btn" style="margin-top:20px" onclick="saveApiKey()">שמור מפתח</button>
+      <button onclick="showView('homeView')" style="background:none; border:none; color:var(--muted); width:100%; padding:15px; cursor:pointer; font-size:14px">חזרה</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// המפתח מוזרק אוטומטית רק ב-Canvas. מחוץ לו (כמו GitHub), נשתמש במפתח שהמשתמש הזין.
+const envApiKey = ""; 
+const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+
+let wines = JSON.parse(localStorage.getItem('wines_v3') || '[]');
+let currentRating = 0;
+
+function init() {
+  const userKey = localStorage.getItem('wine_journal_api_key');
+  if (!envApiKey && !userKey) {
+    document.getElementById('keyMissingAlert').classList.remove('hidden');
+  }
+  renderHome();
+}
+
+function getApiKey() {
+  return envApiKey || localStorage.getItem('wine_journal_api_key') || "";
+}
+
+function saveApiKey() {
+  const key = document.getElementById('userApiKey').value.trim();
+  if (key) {
+    localStorage.setItem('wine_journal_api_key', key);
+    showToast("המפתח נשמר בהצלחה!");
+    document.getElementById('keyMissingAlert').classList.add('hidden');
+    showView('homeView');
+  }
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerText = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+function showView(id) {
+  ['homeView', 'loadingView', 'resultView', 'setupView'].forEach(v => {
+    document.getElementById(v).classList.toggle('hidden', v !== id);
+  });
+  if (id === 'setupView') {
+    document.getElementById('userApiKey').value = localStorage.getItem('wine_journal_api_key') || "";
+  }
+}
+
+function setMode(mode) {
+  document.getElementById('photoMode').classList.toggle('hidden', mode !== 'photo');
+  document.getElementById('textMode').classList.toggle('hidden', mode !== 'text');
+  document.getElementById('btnPhoto').classList.toggle('active', mode === 'photo');
+  document.getElementById('btnText').classList.toggle('active', mode === 'text');
+}
+
+const WINE_PROMPT = `Analyze this wine label/text. Respond ONLY with a valid JSON in Hebrew. 
+{
+  "name": "Wine Name",
+  "winery": "Winery",
+  "vintage": "Year",
+  "region": "Region",
+  "grapes": "Varieties",
+  "type": "אדום/לבן/רוזה",
+  "alcohol": "Alcohol %",
+  "description": "Short sommelier tasting notes",
+  "food_suggestion": "Food pairing suggestion"
+}`;
+
+async function callGemini(payload, isImage = false) {
+  const activeKey = getApiKey();
+  if (!activeKey) {
+    showView('setupView');
+    throw new Error("Missing API Key");
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${activeKey}`;
+  let delay = 1000;
+
+  for (let i = 0; i < 5; i++) {
+    try {
+      const body = isImage ? { contents: [{ role: "user", parts: payload }] } 
+                           : { contents: [{ parts: payload }], systemInstruction: { parts: [{ text: "Expert Sommelier. Hebrew only JSON." }] } };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      
+      if (!response.ok) throw new Error(`API Error ${response.status}`);
+      
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      return JSON.parse(text.replace(/```json|```/g, '').trim());
+    } catch (err) {
+      if (i === 4) throw err;
+      await new Promise(r => setTimeout(r, delay));
+      delay *= 2;
+    }
+  }
+}
+
+async function handlePhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  showView('loadingView');
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const base64Data = reader.result.split(',')[1];
+    try {
+      const result = await callGemini([
+        { text: WINE_PROMPT },
+        { inlineData: { mimeType: file.type, data: base64Data } }
+      ], true);
+      showResult(result);
+    } catch (err) {
+      showToast("שגיאה בניתוח. בדוק את המפתח.");
+      showView('homeView');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function handleText() {
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query) return;
+  
+  showView('loadingView');
+  try {
+    const result = await callGemini([{ text: `${WINE_PROMPT}\nSearch: ${query}` }]);
+    showResult(result);
+  } catch (err) {
+    showToast("שגיאה בחיפוש היין");
+    showView('homeView');
+  }
+}
+
+function showResult(data) {
+  currentRating = 0;
+  showView('resultView');
+  const container = document.getElementById('resultView');
+  container.innerHTML = `
+    <div class="result-card">
+      <span class="type-badge type-${data.type}">${data.type}</span>
+      <h2 class="wine-name" style="font-size:24px">${data.name}</h2>
+      <p style="color:var(--muted); margin-bottom:15px">${data.winery} · ${data.vintage}</p>
+      
+      <div class="info-grid">
+        <div class="info-pill"><div class="lbl">אזור</div><div class="val">${data.region}</div></div>
+        <div class="info-pill"><div class="lbl">זנים</div><div class="val">${data.grapes}</div></div>
+      </div>
+      
+      <p style="line-height:1.6; font-size:15px; color:var(--text)">${data.description}</p>
+      
+      <div style="margin-top:15px; padding:12px; background:rgba(205,160,80,0.1); border-radius:12px; font-size:14px">
+        <strong>🍴 התאמה לאוכל:</strong> ${data.food_suggestion}
+      </div>
+
+      <button class="save-btn" style="background:var(--surface); border:1px solid var(--border); color:var(--gold); font-size:12px; height:auto; padding:8px 15px; width:auto; margin-top:15px" onclick="copyAnalysis('${data.name}', '${data.description}')">
+        📋 העתק ניתוח
+      </button>
+    </div>
+
+    <div class="user-card">
+      <h3 style="margin-bottom:15px; font-size:18px">איך היין לטעמך?</h3>
+      <div class="stars" id="ratingInput">
+        ${[1,2,3,4,5].map(i => `<button onclick="updateRating(${i})" data-star="${i}">☆</button>`).join('')}
+      </div>
+      <textarea id="userNotes" class="input-field" rows="3" placeholder="הערות אישיות (עם מי שתית, אירוע...)"></textarea>
+      <button class="save-btn" style="margin-top:20px" onclick="saveWine('${encodeURIComponent(JSON.stringify(data))}')">שמור ביומן</button>
+    </div>
+    
+    <button onclick="showView('homeView')" style="background:none; border:none; color:var(--muted); width:100%; padding:20px; cursor:pointer; font-weight:600">ביטול וחזרה</button>
+  `;
+}
+
+function updateRating(r) {
+  currentRating = r;
+  document.querySelectorAll('#ratingInput button').forEach((b, i) => {
+    b.innerText = (i < r ? '★' : '☆');
+    b.classList.toggle('active', i < r);
+  });
+}
+
+function copyAnalysis(name, desc) {
+  const text = `${name}\nניתוח סומלייה:\n${desc}`;
+  const el = document.createElement('textarea');
+  el.value = text;
+  document.body.appendChild(el);
+  el.select();
+  document.execCommand('copy');
+  document.body.removeChild(el);
+  showToast("התיאור הועתק!");
+}
+
+function saveWine(encoded) {
+  const data = JSON.parse(decodeURIComponent(encoded));
+  const notes = document.getElementById('userNotes').value;
+  
+  wines.unshift({
+    id: Date.now(),
+    data,
+    rating: currentRating,
+    notes,
+    date: new Date().toLocaleDateString('he-IL')
+  });
+  
+  localStorage.setItem('wines_v3', JSON.stringify(wines));
+  showToast("נשמר בהצלחה!");
+  showView('homeView');
+  renderHome();
+}
+
+function renderHome() {
+  const list = document.getElementById('wineList');
+  const stats = document.getElementById('statsBar');
+  const avg = wines.length ? (wines.reduce((a,b)=>a+b.rating, 0) / wines.length).toFixed(1) : 0;
+  
+  stats.innerHTML = `
+    <div class="stat-card"><div class="stat-val">${wines.length}</div><div class="stat-label">יינות</div></div>
+    <div class="stat-card"><div class="stat-val">${avg}</div><div class="stat-label">ממוצע</div></div>
+    <div class="stat-card"><div class="stat-val">🥂</div><div class="stat-label">לחיים!</div></div>
+  `;
+
+  if (!wines.length) {
+    list.innerHTML = `<div style="text-align:center; padding:60px; color:var(--muted); opacity:0.6">היומן שלך ריק.<br>הגיע הזמן לפתוח בקבוק!</div>`;
+    return;
+  }
+
+  list.innerHTML = wines.map(w => `
+    <div class="wine-card" onclick="this.classList.toggle('open')">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start">
+        <div style="flex:1; padding-left:10px">
+          <div class="wine-name">${w.data.name}</div>
+          <div class="wine-winery">${w.data.winery} · ${w.data.vintage}</div>
+        </div>
+        <div style="color:var(--gold); font-size:14px">${'★'.repeat(w.rating)}${'☆'.repeat(5-w.rating)}</div>
+      </div>
+      <div class="wine-details">
+        <p style="font-size:14px; line-height:1.6; color:var(--text)">${w.data.description}</p>
+        <div style="margin-top:15px; padding:12px; background:var(--surface); border-radius:12px; border-right:4px solid var(--gold)">
+          <div style="font-size:13px">${w.notes || 'אין הערות'}</div>
+          <div style="font-size:10px; color:var(--muted); margin-top:6px">${w.date}</div>
+        </div>
+        <button onclick="event.stopPropagation(); deleteWine(${w.id})" style="background:none; border:none; color:var(--accent-light); font-size:12px; margin-top:15px; cursor:pointer">🗑️ מחיקה</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteWine(id) {
+  if (confirm("למחוק מהיומן?")) {
+    wines = wines.filter(w => w.id !== id);
+    localStorage.setItem('wines_v3', JSON.stringify(wines));
+    renderHome();
+  }
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
