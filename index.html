@@ -352,6 +352,28 @@
   }
   .empty-state .emoji { font-size: 48px; margin-bottom: 16px; }
 
+  .chat-section { margin-top: 10px; }
+  .chat-messages { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; max-height: 400px; overflow-y: auto; }
+  .chat-msg {
+    padding: 14px 18px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.7;
+    max-width: 90%;
+  }
+  .chat-msg.user { background: var(--accent); color: #fff; align-self: flex-end; border-bottom-left-radius: 16px; border-bottom-right-radius: 4px; }
+  .chat-msg.bot { background: var(--surface); color: var(--text); border: 1px solid var(--border); align-self: flex-start; border-bottom-right-radius: 16px; border-bottom-left-radius: 4px; }
+  .chat-input-row { display: flex; gap: 10px; }
+  .chat-input {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; color: var(--text); padding: 14px; font-family: inherit; font-size: 15px; outline: none; direction: rtl;
+  }
+  .chat-send {
+    background: var(--gold); color: var(--bg); border: none; border-radius: 14px;
+    width: 48px; height: 48px; font-size: 20px; cursor: pointer; flex-shrink: 0; font-weight: 800;
+  }
+  .chat-send:disabled { opacity: 0.4; }
+
   .hidden { display: none !important; }
 </style>
 </head>
@@ -407,7 +429,7 @@
     <div class="loading">
       <div class="spinner"></div>
       <p style="font-weight:700; font-size: 18px;">רגע, בודק את הבקבוק...</p>
-      <p style="color:var(--muted); font-size: 14px; margin-top: 10px;">קורא את התווית ומכין לך סיכום קצר</p>
+      <p style="color:var(--muted); font-size: 14px; margin-top: 10px;">קורא את התווית ומחפש מידע אמיתי ברשת</p>
     </div>
   </div>
 
@@ -510,14 +532,33 @@ function esc(str) {
 }
 
 // ========== PROMPTS ==========
-const WINE_PROMPT_IMAGE = `You are a friendly wine expert helping everyday people understand wine — no jargon, no snobbery.
+const WINE_PROMPT_IMAGE = `You are a wine expert. You provide factual, verified information — not generic descriptions or taste adjectives.
 
-Analyze this wine label image carefully.
+STEP 0 — IMAGE QUALITY CHECK (DO THIS FIRST):
+Can you clearly read the winery name AND wine name from the label?
+- If blurry, dark, too small, or unreadable → STOP. Return ONLY: {"error": "התמונה לא ברורה מספיק. נסה לצלם שוב מקרוב ובתאורה טובה."}
+- Do NOT guess from bottle shape or partial text. Only proceed if you can READ the name.
 
-READING RULES:
-- Read the vintage year from the main label, neck label, capsule sticker, or back label. If you cannot find a year, return "N/A".
-- Read the winery and wine name exactly as printed. Do not guess or invent.
-- Identify grape varieties ONLY if stated on the label. Otherwise use the wine name/region to determine likely varieties and note with "ככל הנראה".
+STEP 1 — READ THE LABEL:
+- Vintage year from main label, neck label, capsule sticker, or back label. If not found → "N/A".
+- Winery and wine name exactly as printed.
+- Grape varieties only if stated. Otherwise "ככל הנראה" + inference.
+- Series/tier if present (Reserve, Private Collection, etc).
+
+STEP 2 — SEARCH THE WEB:
+USE GOOGLE SEARCH to find real data about this specific wine:
+- Winery website, tech sheet, wine databases (Vivino, Wine-Searcher, Wine Spectator)
+- Actual barrel details (oak type, months, new/used %), grape percentages, winemaking notes
+Base ALL analysis on verified facts. If data not found, write "לא נמצא מידע מאומת".
+
+STEP 3 — ANALYZE (cross-reference all 5 factors):
+Each factor affects the others. Do NOT analyze in isolation.
+
+WRITING RULES:
+- Hebrew, one sentence per field. STRICTLY one sentence — not two, not three.
+- State FACTS and DATA only. No taste adjectives (not "רך", "פירותי", "אלגנטי", "מורכב", "עשיר", "עדין").
+- Pattern: state the fact → then what it implies. Example: "12 חודשי אלון צרפתי חדש בסדרת Reserve — מה שמצביע על יין עם מורכבות גבוהה."
+- If you infer something, state the basis for the inference.
 
 Respond ONLY with valid JSON in Hebrew (no markdown, no backticks):
 {
@@ -525,33 +566,55 @@ Respond ONLY with valid JSON in Hebrew (no markdown, no backticks):
   "winery": "שם היקב",
   "vintage": "שנה או N/A",
   "region": "אזור/מדינה",
-  "grapes": "זנים",
+  "grapes": "זנים + אחוזים אם נמצא",
+  "series": "סדרה/דרגה, או ריק",
   "type": "אדום/לבן/רוזה/כתום/מבעבע",
-  "description": "2-3 משפטים בעברית פשוטה: מה תרגישו בכוס? תארו טעמים וארומות בצורה חיה וקונקרטית — כמו לתאר לחבר. לא ז'רגון, לא קלישאות סומלייה. היו ספציפיים ליין הזה, לא גנריים.",
-  "food_suggestion": "2-3 מנות פשוטות ונגישות שאנשים באמת מכינים בבית או מזמינים במסעדה. לא תבשילים מסובכים מטור אוכל — דברים אמיתיים שעובדים. תסבירו בקצרה למה ההתאמה טובה.",
-  "serving_tip": "טיפ פרקטי אחד: טמפרטורת הגשה, כמה זמן לפתוח מראש, או האם שווה לשכב עוד — משהו שבאמת ישפר את החוויה",
-  "drink_window": "האם לשתות עכשיו או שכדאי לחכות? מתי היין בשיא שלו?"
+  "analysis_region": "משפט אחד: עובדה על האזור + מה זה אומר ליין הזה בהצלבה עם הסדרה והזנים.",
+  "analysis_grapes": "משפט אחד: הרכב מדויק אם נמצא + מה ההצלבה עם האזור והחבית אומרת.",
+  "analysis_barrel": "משפט אחד: נתוני חבית מאומתים (סוג, חודשים, % חדשות). אם לא נמצא — כתוב.",
+  "analysis_vintage": "משפט אחד: עובדות על הבציר באזור + מה זה אומר בהצלבה עם הזנים.",
+  "analysis_series": "משפט אחד: מיקום בהיררכיה של היקב + מה זה אומר על רמת הברירה והטיפול.",
+  "serving_tip": "טיפ אחד קצר ומעשי — על סמך נתונים אמיתיים",
+  "drink_window": "מתי לשתות — על סמך נתונים אמיתיים"
 }`;
 
-const WINE_PROMPT_TEXT = `You are a friendly wine expert helping everyday people understand wine — no jargon, no snobbery.
+const WINE_PROMPT_TEXT = `You are a wine expert. You provide factual, verified information — not generic descriptions or taste adjectives.
 
-The user is searching for a wine by name/description. Use your knowledge to provide accurate info.
-If the wine exists — provide real, factual data. If you're not sure about specific details, say so.
-Do NOT invent vintages or facts you don't know.
+USE GOOGLE SEARCH to find real data about the wine the user is looking for:
+- Winery website, tech sheet, wine databases
+- Actual barrel details, grape percentages, winemaking notes
+Base ALL analysis on verified facts. If data not found, write "לא נמצא מידע מאומת".
+Do NOT invent facts.
+
+Cross-reference ALL 5 factors — each affects the others.
+
+WRITING RULES:
+- Hebrew, one sentence per field. STRICTLY one sentence.
+- State FACTS only. No taste adjectives (not "רך", "פירותי", "אלגנטי", "מורכב").
+- Pattern: fact → implication.
 
 Respond ONLY with valid JSON in Hebrew (no markdown, no backticks):
 {
   "name": "שם היין",
   "winery": "שם היקב",
-  "vintage": "שנה אם צוינה, אחרת N/A",
+  "vintage": "שנה או N/A",
   "region": "אזור/מדינה",
-  "grapes": "זנים",
+  "grapes": "זנים + אחוזים אם נמצא",
+  "series": "סדרה/דרגה, או ריק",
   "type": "אדום/לבן/רוזה/כתום/מבעבע",
-  "description": "2-3 משפטים בעברית פשוטה: מה תרגישו בכוס? תארו טעמים וארומות בצורה חיה וקונקרטית — כמו לתאר לחבר. היו ספציפיים ליין הזה.",
-  "food_suggestion": "2-3 מנות פשוטות ונגישות שאנשים באמת מכינים בבית או מזמינים במסעדה. לא תבשילים מסובכים מטור אוכל — דברים אמיתיים שעובדים. תסבירו בקצרה למה ההתאמה טובה.",
-  "serving_tip": "טיפ פרקטי אחד שבאמת ישפר את החוויה",
-  "drink_window": "האם לשתות עכשיו או שכדאי לחכות?"
+  "analysis_region": "משפט אחד: עובדה + מה זה אומר בהצלבה עם שאר הפרמטרים.",
+  "analysis_grapes": "משפט אחד: הרכב מדויק + הצלבה עם אזור וחבית.",
+  "analysis_barrel": "משפט אחד: נתוני חבית מאומתים. אם לא נמצא — כתוב.",
+  "analysis_vintage": "משפט אחד: עובדות על הבציר באזור.",
+  "analysis_series": "משפט אחד: מיקום בהיררכיה של היקב.",
+  "serving_tip": "טיפ אחד קצר ומעשי",
+  "drink_window": "מתי לשתות — על סמך נתונים"
 }`;
+
+const WINE_FOLLOWUP_SYSTEM = `You are a wine expert answering a follow-up question about a specific wine.
+Here is the wine data: {WINE_DATA}
+Answer in Hebrew, concisely, based on verified facts. Use Google Search if needed.
+No taste adjectives, no sommelier clichés. Facts and data only.`;
 
 // ========== API ==========
 async function callGemini(payload) {
@@ -566,7 +629,10 @@ async function callGemini(payload) {
   let delay = 1000;
   for (let i = 0; i < 3; i++) {
     try {
-      const body = { contents: [{ role: "user", parts: payload }] };
+      const body = {
+        contents: [{ role: "user", parts: payload }],
+        tools: [{ google_search: {} }]
+      };
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -579,7 +645,9 @@ async function callGemini(payload) {
       }
       
       const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      // עם grounding, הטקסט יכול להיות בכמה parts — מחפשים את הטקסט
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const text = parts.map(p => p.text || '').join('');
       if (!text) throw new Error("תגובה ריקה מהשרת");
       const jsonStr = text.replace(/```json|```/g, '').trim();
       return JSON.parse(jsonStr);
@@ -589,6 +657,29 @@ async function callGemini(payload) {
       delay *= 2;
     }
   }
+}
+
+async function callGeminiRaw(payload) {
+  const activeKey = getApiKey();
+  if (!activeKey) throw new Error("Missing API Key");
+
+  const url = `https://generativelanguage.googleapis.com/${API_VERSION}/models/${GEMINI_MODEL}:generateContent?key=${activeKey}`;
+  const body = {
+    contents: [{ role: "user", parts: payload }],
+    tools: [{ google_search: {} }]
+  };
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!response.ok) {
+    const errJson = await response.json().catch(() => ({}));
+    throw new Error(errJson.error?.message || `שגיאה (${response.status})`);
+  }
+  const data = await response.json();
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  return parts.map(p => p.text || '').join('').trim() || 'לא הצלחתי למצוא תשובה.';
 }
 
 // ========== IMAGE HANDLING ==========
@@ -623,6 +714,11 @@ async function handlePhoto(e) {
         { text: WINE_PROMPT_IMAGE },
         { inlineData: { mimeType: file.type, data: base64Data } }
       ]);
+      if (result.error) {
+        showToast(result.error);
+        showView('homeView');
+        return;
+      }
       showResult(result);
     } catch (err) {
       showToast(`שגיאה: ${err.message}`);
@@ -665,11 +761,24 @@ function showResult(data) {
         <div class="info-pill"><div class="lbl">אזור</div><div class="val">${esc(data.region)}</div></div>
         <div class="info-pill"><div class="lbl">זנים</div><div class="val">${esc(data.grapes)}</div></div>
       </div>
-      
-      <p style="line-height:1.8; font-size:15px; color:var(--text); margin-bottom:20px">${esc(data.description)}</p>
-      
-      <div style="padding:16px; background:rgba(205,160,80,0.1); border-radius:12px; font-size:14px; border-right: 4px solid var(--gold); margin-bottom:12px">
-        <strong style="color:var(--gold)">🍴 מה לאכול עם זה:</strong><br>${esc(data.food_suggestion)}
+      ${data.series ? `<div style="margin-bottom:20px"><div class="info-pill" style="display:inline-block"><div class="lbl">סדרה</div><div class="val">${esc(data.series)}</div></div></div>` : ''}
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px">
+        <div style="padding:12px 16px; background:var(--surface); border-radius:12px; border:1px solid var(--border); font-size:14px; line-height:1.6">
+          <span style="color:var(--gold); font-weight:700">🌍 אזור:</span> ${esc(data.analysis_region)}
+        </div>
+        <div style="padding:12px 16px; background:var(--surface); border-radius:12px; border:1px solid var(--border); font-size:14px; line-height:1.6">
+          <span style="color:var(--gold); font-weight:700">🍇 זנים:</span> ${esc(data.analysis_grapes)}
+        </div>
+        <div style="padding:12px 16px; background:var(--surface); border-radius:12px; border:1px solid var(--border); font-size:14px; line-height:1.6">
+          <span style="color:var(--gold); font-weight:700">🪵 חבית:</span> ${esc(data.analysis_barrel)}
+        </div>
+        <div style="padding:12px 16px; background:var(--surface); border-radius:12px; border:1px solid var(--border); font-size:14px; line-height:1.6">
+          <span style="color:var(--gold); font-weight:700">📅 בציר:</span> ${esc(data.analysis_vintage)}
+        </div>
+        <div style="padding:12px 16px; background:var(--surface); border-radius:12px; border:1px solid var(--border); font-size:14px; line-height:1.6">
+          <span style="color:var(--gold); font-weight:700">🏷️ סדרה:</span> ${esc(data.analysis_series)}
+        </div>
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px">
@@ -697,6 +806,15 @@ function showResult(data) {
       <textarea id="userNotes" class="input-field" rows="3" placeholder="הערות אישיות (אירוע, מחיר, עם מי שתית...)"></textarea>
       <button class="save-btn" style="margin-top:20px" onclick="saveWine()">שמור ביומן</button>
     </div>
+
+    <div class="result-card chat-section">
+      <h3 style="margin-bottom:15px; font-size:18px">💬 שאלות על היין</h3>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <input id="chatInput" class="chat-input" placeholder='למשל: יש משהו דומה וזול יותר?' onkeydown="if(event.key==='Enter')askFollowUp()" />
+        <button class="chat-send" id="chatSendBtn" onclick="askFollowUp()">➤</button>
+      </div>
+    </div>
     
     <button onclick="showView('homeView')" class="back-btn">חזרה</button>
   `;
@@ -710,13 +828,51 @@ function updateRating(r) {
   });
 }
 
+// ========== FOLLOW-UP CHAT ==========
+async function askFollowUp() {
+  const input = document.getElementById('chatInput');
+  const btn = document.getElementById('chatSendBtn');
+  const messages = document.getElementById('chatMessages');
+  const question = input.value.trim();
+  if (!question || !currentResult) return;
+
+  // הצג שאלת המשתמש
+  input.value = '';
+  btn.disabled = true;
+  messages.innerHTML += `<div class="chat-msg user">${esc(question)}</div>`;
+  messages.innerHTML += `<div class="chat-msg bot" id="chatLoading" style="opacity:0.5">מחפש...</div>`;
+  messages.scrollTop = messages.scrollHeight;
+
+  try {
+    const wineContext = JSON.stringify(currentResult);
+    const systemPrompt = WINE_FOLLOWUP_SYSTEM.replace('{WINE_DATA}', wineContext);
+    const answer = await callGeminiRaw([{ text: `${systemPrompt}\n\nשאלת המשתמש: ${question}` }]);
+    
+    const loading = document.getElementById('chatLoading');
+    if (loading) loading.remove();
+
+    messages.innerHTML += `<div class="chat-msg bot">${esc(answer)}</div>`;
+  } catch (err) {
+    const loading = document.getElementById('chatLoading');
+    if (loading) loading.remove();
+    messages.innerHTML += `<div class="chat-msg bot">${esc(err.message)}</div>`;
+  }
+  btn.disabled = false;
+  messages.scrollTop = messages.scrollHeight;
+}
+
 // ========== SHARE & COPY ==========
 function buildShareText(d) {
   let t = `🍷 ${d.name} | ${d.winery}`;
   if (d.vintage && d.vintage !== 'N/A') t += ` ${d.vintage}`;
-  t += `\n\n${d.description}`;
-  t += `\n\n🍴 ${d.food_suggestion}`;
-  if (d.serving_tip) t += `\n💡 ${d.serving_tip}`;
+  if (d.analysis_region) t += `\n\n🌍 אזור: ${d.analysis_region}`;
+  if (d.analysis_grapes) t += `\n🍇 זנים: ${d.analysis_grapes}`;
+  if (d.analysis_barrel) t += `\n🪵 חבית: ${d.analysis_barrel}`;
+  if (d.analysis_vintage) t += `\n📅 בציר: ${d.analysis_vintage}`;
+  if (d.analysis_series) t += `\n🏷️ סדרה: ${d.analysis_series}`;
+  // תמיכה ביינות ישנים עם description
+  if (!d.analysis_region && d.description) t += `\n\n${d.description}`;
+  if (d.serving_tip) t += `\n\n💡 ${d.serving_tip}`;
   if (d.drink_window) t += `\n⏳ ${d.drink_window}`;
   return t;
 }
@@ -835,10 +991,14 @@ function renderWineList(arr) {
         <div style="color:var(--gold); font-size:13px; flex-shrink:0">${'★'.repeat(w.rating)}${'☆'.repeat(5 - w.rating)}</div>
       </div>
       <div class="wine-details">
-        <p style="font-size:14px; line-height:1.7; color:var(--text)">${esc(w.data.description)}</p>
+        ${w.data.analysis_region ? `<p style="font-size:13px; line-height:1.6; color:var(--text); margin-bottom:6px"><span style="color:var(--gold)">🌍</span> ${esc(w.data.analysis_region)}</p>` : ''}
+        ${w.data.analysis_grapes ? `<p style="font-size:13px; line-height:1.6; color:var(--text); margin-bottom:6px"><span style="color:var(--gold)">🍇</span> ${esc(w.data.analysis_grapes)}</p>` : ''}
+        ${w.data.analysis_barrel ? `<p style="font-size:13px; line-height:1.6; color:var(--text); margin-bottom:6px"><span style="color:var(--gold)">🪵</span> ${esc(w.data.analysis_barrel)}</p>` : ''}
+        ${w.data.analysis_vintage ? `<p style="font-size:13px; line-height:1.6; color:var(--text); margin-bottom:6px"><span style="color:var(--gold)">📅</span> ${esc(w.data.analysis_vintage)}</p>` : ''}
+        ${w.data.analysis_series ? `<p style="font-size:13px; line-height:1.6; color:var(--text); margin-bottom:6px"><span style="color:var(--gold)">🏷️</span> ${esc(w.data.analysis_series)}</p>` : ''}
+        ${w.data.description ? `<p style="font-size:13px; line-height:1.6; color:var(--text); margin-bottom:6px">${esc(w.data.description)}</p>` : ''}
         ${w.data.serving_tip ? `<p style="font-size:13px; color:var(--muted); margin-top:10px">💡 ${esc(w.data.serving_tip)}</p>` : ''}
         ${w.data.drink_window ? `<p style="font-size:13px; color:var(--muted); margin-top:4px">⏳ ${esc(w.data.drink_window)}</p>` : ''}
-        ${w.data.food_suggestion ? `<p style="font-size:13px; color:var(--muted); margin-top:4px">🍴 ${esc(w.data.food_suggestion)}</p>` : ''}
         <div style="margin-top:15px; padding:12px; background:var(--surface); border-radius:12px; border-right:4px solid var(--gold)">
           <div style="font-size:13px">${esc(w.notes) || 'אין הערות'}</div>
           <div style="font-size:10px; color:var(--muted); margin-top:6px">${w.date}</div>
@@ -858,7 +1018,7 @@ function filterWines() {
   if (!q) { renderWineList(wines); return; }
   const filtered = wines.filter(w => {
     const d = w.data;
-    return [d.name, d.winery, d.vintage, d.region, d.grapes, d.type, w.notes]
+    return [d.name, d.winery, d.vintage, d.region, d.grapes, d.type, d.series, d.analysis_region, d.analysis_grapes, d.description, w.notes]
       .join(' ').toLowerCase().includes(q);
   });
   renderWineList(filtered);
@@ -882,11 +1042,14 @@ function deleteWine(id) {
 function exportCSV() {
   if (!wines.length) return;
   
-  const headers = ['שם היין','יקב','בציר','סוג','אזור','זנים','תיאור','התאמה לאוכל','טיפ הגשה','חלון שתייה','דירוג','הערות','תאריך'];
+  const headers = ['שם היין','יקב','בציר','סוג','סדרה','אזור','זנים','ניתוח אזור','ניתוח זנים','ניתוח חבית','ניתוח בציר','ניתוח סדרה','טיפ הגשה','חלון שתייה','דירוג','הערות','תאריך'];
   const rows = wines.map(w => [
-    w.data.name, w.data.winery, w.data.vintage, w.data.type,
-    w.data.region, w.data.grapes, w.data.description,
-    w.data.food_suggestion, w.data.serving_tip || '', w.data.drink_window || '',
+    w.data.name, w.data.winery, w.data.vintage, w.data.type, w.data.series || '',
+    w.data.region, w.data.grapes,
+    w.data.analysis_region || w.data.description || '',
+    w.data.analysis_grapes || '', w.data.analysis_barrel || '',
+    w.data.analysis_vintage || '', w.data.analysis_series || '',
+    w.data.serving_tip || '', w.data.drink_window || '',
     w.rating, w.notes || '', w.date
   ]);
   
